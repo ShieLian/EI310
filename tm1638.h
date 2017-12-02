@@ -13,9 +13,9 @@
 #define DIO_IN  P2DIR &= ~BIT5    //P2.5 设置为输入
 #define DIO_OUT P2DIR |=  BIT5    //P2.5 设置为输出
 #define DIO_DATA_IN    P2IN & BIT5
-typedef short bool;
-#define false 0
-#define true 1
+//typedef short bool;
+//#define false 0
+//#define true 1
 // 将显示数字或符号转换为共阴数码管的笔画值
 unsigned char TM1638_DigiSegment(unsigned char digit)
 {

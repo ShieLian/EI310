@@ -1,7 +1,9 @@
 ﻿//本程序时钟采用内部RC振荡器。     DCO：8MHz,供CPU时钟;  SMCLK：1MHz,供定时器时钟
 #include <msp430g2553.h>
 #include <tm1638.h>
+#include <controller.h>
 #include <adc.h>
+#include <dac.h>
 /////////////////////////////
 //         常量定义         //
 //////////////////////////////
@@ -29,9 +31,9 @@ extern unsigned char led[]={0,0,0,0,0,0,0,0};
 // 当前按键值
 extern unsigned char key_code=0;
 bool upgraded=false;
-unsigned short level=1;
 
-enum PIN {P1,P2};
+extern enum DISPLAY display_state=V_SOURCE;
+//enum PIN {P1,P2};
 //////////////////////////////
 //       系统初始化         //
 //////////////////////////////
@@ -66,7 +68,7 @@ void Init_Ports(void)
 
 	P2DIR |= BIT7 + BIT6 + BIT5; //P2.5、P2.6、P2.7 设置为输出
 	//set_output(P1,0xF);
-	P1SEL|=BIT1+BIT0;
+
 }
 
 //  定时器TIMER0初始化，循环定时20ms
@@ -129,41 +131,41 @@ __interrupt void Timer0_A0 (void)
 
 
 void update_display(void){
-//    if(!upgraded){
-//        if(key_code==1){
-//            upgraded=true;
-//            --level;
-//            if(level==0)
-//                level=15;
-//        } else if(key_code==2){
-//            upgraded=true;
-//            ++level;
-//            if(level==16)
-//                level=1;
-//        } else{
-//            upgraded=false;
-//        }
-//    } else{
-//        if(key_code!=1 && key_code!=2)
-//            upgraded=false;
-//    }
-    //_BIC_SR(GIE);
-//    _DINT();
-    int volt_str=(int)(50*sum_volt0);
-    int ampere_str=(int)(50*sum_ampere0);
-    digit[3] = (digit[3]&0x80) + volt_str%10;
-    digit[2] = (digit[2]&0x80) + (volt_str/10)%10;
-    digit[1] = (digit[1]&0x80) + (volt_str/100)%10;
-    digit[0] = (digit[0]&0x80) + (volt_str/1000)%10;
-    digit[7] = (digit[7]&0x80) + ampere_str%10;
-    digit[6] = (digit[6]&0x80) + (ampere_str/10)%10;
-    digit[5] = (digit[5]&0x80) + (ampere_str/100)%10;
-    digit[4] = (digit[4]&0x80) + (ampere_str/1000)%10;
-//    _EINT();
-//    _BIS_SR(GIE);
-//    if(true){
-//        P1OUT=(unsigned char)((P1OUT & 0xF0) + (level & 0x0F));
-//    }
+    int volt_str;
+    int ampere_str;
+    switch(display_state){
+    case V_SOURCE:
+        volt_str=(int)(100*sum_volt0);
+        ampere_str=(int)(100*sum_ampere0);
+
+        digit[3] = volt_str%10;
+        digit[2] = (volt_str/10)%10;
+        digit[1] = (volt_str/100)%10;
+        digit[0] = (volt_str/1000)%10;
+        digit[7] = ampere_str%10;
+        digit[6] = (ampere_str/10)%10;
+        digit[5] = (ampere_str/100)%10;
+        digit[4] = (ampere_str/1000)%10;
+        break;
+    case I_SOURCE:
+        volt_str=(int)(100*sum_volt1);
+        ampere_str=(int)(100*sum_ampere1);
+
+        digit[3] = volt_str%10;
+        digit[2] = (volt_str/10)%10;
+        digit[1] = (volt_str/100)%10;
+        digit[0] = (volt_str/1000)%10;
+        digit[7] = ampere_str%10;
+        digit[6] = (ampere_str/10)%10;
+        digit[5] = (ampere_str/100)%10;
+        digit[4] = (ampere_str/1000)%10;
+        break;
+    case DAC:
+        digit[2] = ampere%10;
+        digit[1] = (ampere/10)%10;
+        digit[0] = (ampere/100)%10;
+        digit[3] = ' ';
+    }
 }
 
 //////////////////////////////
@@ -171,9 +173,9 @@ void update_display(void){
 //////////////////////////////
 int main(void)
 {
-	//unsigned char i=0,temp;
    	Init_Devices();
 	init_adc();
+	init_dac();
 	while (clock100ms<3);   // 延时60ms等待TM1638上电完成
 	init_TM1638();	    //初始化TM1638
 
@@ -185,9 +187,8 @@ int main(void)
             //更新增益等级
 		}
 		//调用扩展模块
-//		update_music_ctrl();
-//		update_remote_ctrl();
 		update_adc();
+		update_dac();
 		update_display();
 	}
 }
